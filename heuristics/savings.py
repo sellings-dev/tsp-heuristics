@@ -1,29 +1,27 @@
-import pandas as pd
 import numpy as np
+from timeit import default_timer as timer
 from collections import deque
 
 
-def readData(filepath):
-    df = pd.read_csv(
-        filepath_or_buffer=filepath,
-        header=None,
-        skiprows=6,
-        skip_blank_lines=True,
-        delim_whitespace=True,
-        usecols=[1, 2],
-        names=("n", "x", "y"),
-    )
-    df.dropna(inplace=True)
-
-    return df.to_numpy()
-
-
-def computeDistanceMatrix(cities):
+def computeDistanceMatrix(cities, distType="euclidean"):
     N = cities.shape[0]
 
-    dist = lambda i, j: np.sqrt(
-        (cities[i, 0] - cities[j, 0]) ** 2 + (cities[i, 1] - cities[j, 1]) ** 2
-    )
+    if distType == "euclidean":
+        dist = lambda i, j: np.rint(
+            np.sqrt(
+                (cities[i, 0] - cities[j, 0]) ** 2 + (cities[i, 1] - cities[j, 1]) ** 2
+            )
+        )
+    elif distType == "pseudo":
+        dist = lambda i, j: np.ceil(
+            np.sqrt(
+                (
+                    (cities[i, 0] - cities[j, 0]) ** 2
+                    + (cities[i, 1] - cities[j, 1]) ** 2
+                )
+                / 10
+            )
+        )
 
     distMatrix = np.zeros((N, N), dtype=int)
 
@@ -71,20 +69,28 @@ def computePathCost(path, distMatrix):
     return cost
 
 
-def solveTSP(filepath):
-    cities = readData(filepath)
+def solveTSP(cities, distType="euclidean", hub=None, benchmark=False):
     N = cities.shape[0]
 
-    distMatrix = computeDistanceMatrix(cities)
+    if hub is not None:
+        aux = np.copy(cities[hub])
+        cities[hub] = np.copy(cities[0])
+        cities[0] = np.copy(aux)
+
+    if benchmark:
+        startTime = timer()
+
+    distMatrix = computeDistanceMatrix(cities, distType)
     savingsMatrix = computeSavingsMatrix(distMatrix)
     sortedPairs = computeSortedPairs(savingsMatrix)
+
+    if benchmark:
+        overheadTime = timer()
 
     path = deque()
     path.append(sortedPairs[-1][0] + 1)
     path.append(sortedPairs[-1][1] + 1)
     sortedPairs.pop()
-
-    print(path)
 
     while len(path) < N - 1:
         for i in range(len(sortedPairs) - 1, 0, -1):
@@ -110,8 +116,6 @@ def solveTSP(filepath):
                         sortedPairs.pop(j)
                 break
 
-    print(path)
-    print(len(path))
     for i in range(52):
         if path.count(i) > 1:
             print("ops:", i)
@@ -119,7 +123,14 @@ def solveTSP(filepath):
     path.appendleft(0)
     path.append(0)
 
+    if benchmark:
+        endTime = timer()
+
     cost = computePathCost(path, distMatrix)
-    print(cost)
+
+    if benchmark:
+        execTime = endTime - overheadTime
+        totalTime = endTime - startTime
+        return path, cost, execTime, totalTime
 
     return path, cost
