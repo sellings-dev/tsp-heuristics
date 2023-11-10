@@ -1,35 +1,7 @@
 import numpy as np
 from timeit import default_timer as timer
 from collections import deque
-
-
-def computeDistanceMatrix(cities, distType="euclidean"):
-    N = cities.shape[0]
-
-    if distType == "euclidean":
-        dist = lambda i, j: np.rint(
-            np.sqrt(
-                (cities[i, 0] - cities[j, 0]) ** 2 + (cities[i, 1] - cities[j, 1]) ** 2
-            )
-        )
-    elif distType == "pseudo":
-        dist = lambda i, j: np.ceil(
-            np.sqrt(
-                (
-                    (cities[i, 0] - cities[j, 0]) ** 2
-                    + (cities[i, 1] - cities[j, 1]) ** 2
-                )
-                / 10
-            )
-        )
-
-    distMatrix = np.zeros((N, N), dtype=int)
-
-    for i in range(N):
-        for j in range(i + 1, N):
-            distMatrix[i, j] = dist(i, j)
-
-    return distMatrix
+from utils.functions import computeDistanceMatrix, computePathCost
 
 
 def computeSavingsMatrix(distMatrix):
@@ -57,16 +29,6 @@ def computeSortedPairs(savingsMatrix):
         sortedPairs.append((sortedInd[0][i], sortedInd[1][i]))
 
     return sortedPairs
-
-
-def computePathCost(path, distMatrix):
-    cost = 0
-    for i in range(len(path) - 1):
-        if path[i + 1] > path[i]:
-            cost += distMatrix[path[i], path[i + 1]]
-        else:
-            cost += distMatrix[path[i + 1], path[i]]
-    return cost
 
 
 def solveTSP(cities, distType="euclidean", hub=None, benchmark=False):
@@ -119,8 +81,7 @@ def solveTSP(cities, distType="euclidean", hub=None, benchmark=False):
     for i in range(52):
         if path.count(i) > 1:
             print("ops:", i)
-
-    path.appendleft(0)
+            
     path.append(0)
 
     if benchmark:
